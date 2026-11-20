@@ -1,0 +1,9 @@
+{
+  "name": "sentire-cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sentire Cloud: the console and runbooks for where Sentire products run.",
+  "scripts": { "start": "node src/server.js", "test": "node --test test/status.test.mjs" },
+  "engines": { "node": ">=22" }
+}

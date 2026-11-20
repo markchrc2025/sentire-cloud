@@ -1,0 +1,14 @@
+{
+  "products": [
+    { "id": "ledger", "name": "Sentire Ledger", "engine": "Sentire Framework (Python)", "url": "https://ledger.sentire.solutions", "health": "/api/method/ping" },
+    { "id": "payroll", "name": "Sentire Payroll", "engine": "Sentire Framework kit (Next.js)", "url": "https://payroll.sentire.solutions", "health": "/" },
+    { "id": "projects", "name": "Sentire Projects", "engine": "Sentire Framework kit (Next.js)", "url": "https://projects.apps.sentire.solutions", "health": "/" },
+    { "id": "helpdesk", "name": "Sentire Helpdesk", "engine": "Frappe (moves to Sentire Framework)", "url": "https://helpdesk.apps.sentire.solutions", "health": "/api/method/ping" },
+    { "id": "lms", "name": "Sentire LMS", "engine": "Frappe (moves to Sentire Framework)", "url": "https://lms.apps.sentire.solutions", "health": "/api/method/ping" }
+  ],
+  "platform": [
+    { "id": "dokploy", "name": "Deploy console (Dokploy)", "url": "https://dokploy.sentire.solutions", "health": "/" },
+    { "id": "mail", "name": "Mail relay (Postal)", "url": "https://postal.sentire.solutions", "health": "/" },
+    { "id": "storage", "name": "Object storage (RustFS)", "url": "https://storage.sentire.solutions", "health": "/" }
+  ]
+}
