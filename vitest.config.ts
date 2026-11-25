@@ -10,7 +10,7 @@ export default defineConfig({
     testTimeout: 20000,
     env: {
       DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://postgres@localhost:5432/sentire_cloud_test",
-      APP_URL: "http://localhost:3000",
+      APP_URL: "http://localhost:3999",
       KEY_ENCRYPTION_KEY: "0".repeat(64),
       SESSION_SECRET: "test-session-secret-test-session-secret",
       NODE_ENV: "test",

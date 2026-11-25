@@ -4,11 +4,13 @@ import { runMigrations } from "@/server/db/migrate";
 import { log } from "@/lib/log";
 import { mounts } from "@/server/http/mounts";
 import { startWorker } from "@/worker/start";
+import { ensureRegistry } from "@/server/account/registry";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT ?? 3000);
 
 await runMigrations();
+await ensureRegistry();
 const app = next({ dev, dir: process.cwd() });
 await app.prepare();
 const handle = app.getRequestHandler();

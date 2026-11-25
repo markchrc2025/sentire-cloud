@@ -14,8 +14,7 @@ FROM node:22-alpine AS run
 WORKDIR /app
 RUN apk add --no-cache chromium font-noto && corepack enable
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=8080 CHROME_PATH=/usr/bin/chromium-browser
-COPY --from=build /app ./
-RUN chown -R node:node /app
+COPY --from=build --chown=node:node /app ./
 USER node
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
