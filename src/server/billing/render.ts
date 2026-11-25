@@ -51,12 +51,22 @@ ${seller.bankDetails ? `<p><strong>Bank transfer:</strong> ${esc(seller.bankDeta
 /** Print HTML to PDF with the Chromium in the image (CHROME_PATH). */
 export async function htmlToPdf(html: string): Promise<Buffer> {
   const puppeteer = await import("puppeteer-core");
-  const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome", args: ["--no-sandbox", "--disable-dev-shm-usage"], headless: true });
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const userDataDir = await mkdtemp("/tmp/sc-chrome-");
+  const browser = await puppeteer.launch({
+    executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
+    args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--no-zygote", "--disable-crash-reporter", "--disable-crashpad", "--no-first-run", "--disable-extensions"],
+    headless: true,
+    userDataDir,
+    timeout: 90000,
+    env: { ...process.env, HOME: "/tmp", XDG_CONFIG_HOME: "/tmp", XDG_CACHE_HOME: "/tmp" },
+  });
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load" });
     return Buffer.from(await page.pdf({ format: "A4", printBackground: true }));
   } finally {
     await browser.close();
+    await rm(userDataDir, { recursive: true, force: true });
   }
 }
