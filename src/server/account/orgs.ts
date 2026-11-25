@@ -1,3 +1,4 @@
+import { shared } from "../shared";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { randomToken, sha256 } from "@/lib/crypto";
@@ -136,9 +137,9 @@ export async function listInvitations(ctx: OrgContext) {
 
 /** Seat check per app; filled in by entitlements (Phase 3). Returns the apps whose seat limit would be exceeded. */
 export type SeatCheck = (ctx: OrgContext, appIds: string[], extra: number) => Promise<string[]>;
-let seatCheck: SeatCheck = async () => [];
+const seatBox = shared("seatCheck", () => ({ fn: (async () => []) as SeatCheck }));
 export function setSeatCheck(fn: SeatCheck) {
-  seatCheck = fn;
+  seatBox.fn = fn;
 }
 
 /** UC-03 steps 1 to 3. */
@@ -148,7 +149,7 @@ export async function inviteMember(ctx: OrgContext, input: { email: string; role
   const email = z.string().trim().toLowerCase().email().safeParse(input.email);
   if (!email.success) throw new FormError("Enter a valid email address.", "email");
   await limit(`invite:${ctx.organizationId}`, 50, 3600);
-  const over = await seatCheck(ctx, input.appIds, 1);
+  const over = await seatBox.fn(ctx, input.appIds, 1);
   if (over.length) throw new FormError(`Your plan has no free seat for: ${over.join(", ")}. Upgrade the plan or remove a member first.`, "appIds");
   const existingUser = await findUserByEmail(email.data);
   if (existingUser && (await membershipOf(ctx, existingUser.id))) throw new FormError("This person is already a member.", "email");
@@ -255,7 +256,7 @@ export async function setAppAccess(ctx: OrgContext, membershipId: string, appIds
   const m = await targetMembership(ctx, membershipId);
   const current = (await db().select().from(appAccess).where(inOrg(ctx, appAccess.organizationId, eq(appAccess.membershipId, m.id), eq(appAccess.allowed, true)))).map((a) => a.appId);
   const added = appIds.filter((a) => !current.includes(a));
-  const over = await seatCheck(ctx, added, 1);
+  const over = await seatBox.fn(ctx, added, 1);
   if (over.length) throw new FormError(`Your plan has no free seat for: ${over.join(", ")}.`);
   await db().transaction(async (tx) => {
     await tx.delete(appAccess).where(inOrg(ctx, appAccess.organizationId, eq(appAccess.membershipId, m.id)));

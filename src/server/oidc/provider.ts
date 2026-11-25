@@ -1,3 +1,4 @@
+import { shared } from "../shared";
 import Provider, { type Configuration, type KoaContextWithOIDC } from "oidc-provider";
 import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
@@ -16,9 +17,9 @@ export function apiResource() {
 
 /** Entitlement summary claim (filled by Phase 3). */
 export type EntClaim = (organizationId: string, appId: string) => Promise<Record<string, unknown> | null>;
-let entClaim: EntClaim = async () => null;
+const claimBox = shared("entClaim", () => ({ fn: (async () => null) as EntClaim }));
 export function setEntitlementClaim(fn: EntClaim) {
-  entClaim = fn;
+  claimBox.fn = fn;
 }
 
 export async function orgForGrant(grantId: string | undefined) {
@@ -133,7 +134,7 @@ export async function buildProvider() {
               base.org_name = row.org.tradeName ?? row.org.registeredName;
               base.org_role = row.role;
               base.app_access = (await allowedApps(u.id, g.organizationId)).includes(appId);
-              const ent = await entClaim(g.organizationId, appId);
+              const ent = await claimBox.fn(g.organizationId, appId);
               if (ent) base.ent = ent;
             }
           }

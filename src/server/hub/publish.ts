@@ -1,3 +1,4 @@
+import { shared } from "../shared";
 import { randomUUID } from "node:crypto";
 import { db, type DBorTx } from "../db/client";
 import { events } from "../db/schema";
@@ -18,9 +19,15 @@ export function buildEvent<T>(type: string, organizationId: string | null, data:
 }
 
 type Hook = (e: SentireEvent, tx: DBorTx) => Promise<void>;
-const hooks: Hook[] = [];
+const hooks: Hook[] = shared("publishHooks", () => [] as Hook[]);
 /** Delivery (Phase 3) registers here. */
-export function onPublish(h: Hook) {
+export function onPublish(h: Hook, key?: string) {
+  // A keyed hook is registered once per process, even when a second copy of the module registers it again.
+  if (key) {
+    const seen = shared("publishHookKeys", () => new Set<string>());
+    if (seen.has(key)) return;
+    seen.add(key);
+  }
   hooks.push(h);
 }
 
