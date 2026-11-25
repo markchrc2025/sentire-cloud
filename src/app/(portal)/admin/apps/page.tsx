@@ -26,6 +26,7 @@ export default async function Apps({ searchParams }: { searchParams: SP }) {
           <label className="text-xs">Accepts events (blank = all account and billing)<input className="input" name="acceptsEvents" defaultValue={a.acceptsEvents.join(" ")} /></label>
           <label className="text-xs">Provisioning URL<input className="input" name="provisionUrl" defaultValue={a.provisionUrl ?? ""} /></label>
           <label className="text-xs">Health URL<input className="input" name="healthUrl" defaultValue={a.healthUrl ?? ""} /></label>
+          <label className="text-xs md:col-span-2">Paths on each organization&apos;s site (multi-site apps, JSON: events, callback, export, delete, suspend, resume, health)<input className="input font-mono" name="instancePaths" defaultValue={JSON.stringify(a.instancePaths)} /></label>
           <div className="flex gap-2 md:col-span-2">
             <button className="btn">Save</button>
             <button className="btn-secondary" name="op" value="oidc">New OIDC client secret</button>

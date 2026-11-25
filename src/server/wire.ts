@@ -15,11 +15,15 @@ import { setUsageText } from "./billing/page-extras";
 import { usageLines } from "./entitlements/usage";
 import { listApps } from "./account/registry";
 import "./hub/deliver";
+import { instanceFor, onActivated, onCancelled } from "./hosting/instances";
 
 let wired = false;
 export function wire() {
   if (wired) return;
   wired = true;
+
+  billingHooks.onActivated.push(onActivated);
+  billingHooks.onCancelled.push(onCancelled);
 
   billingHooks.onSubscriptionChanged.push(async (organizationId, subscriptionId, tx) => {
     const [row] = await tx.select({ appId: products.appId }).from(subscriptions).innerJoin(products, eq(products.id, subscriptions.productId)).where(eq(subscriptions.id, subscriptionId));
@@ -58,7 +62,7 @@ export function wire() {
   });
 
   setLauncherExtras(async (organizationId) => {
-    const out: Record<string, { label?: string; open?: boolean; cta?: { label: string; href: string } }> = {};
+    const out: Record<string, { label?: string; open?: boolean; url?: string; cta?: { label: string; href: string } }> = {};
     const prods = await db().select().from(products);
     const apps = await listApps();
     for (const a of apps) {
@@ -66,7 +70,11 @@ export function wire() {
       const e = await getEntitlement(organizationId, a.appId);
       if (!e || e.state === "OFF") out[a.appId] = { label: "Not subscribed.", open: false, cta: { label: "See plans", href: `/org/billing/subscribe?product=${prods.find((p) => p.appId === a.appId)!.code}` } };
       else if (e.state === "READ_ONLY") out[a.appId] = { label: "Read-only until the overdue statement is paid.", open: true };
-      else out[a.appId] = { label: `${e.planCode ? e.planCode[0]!.toUpperCase() + e.planCode.slice(1) : ""} plan, active.` };
+      else {
+        const inst = await instanceFor(organizationId, a.appId);
+        if (inst && inst.status !== "ACTIVE") out[a.appId] = { label: "Setting up your app. We will email you when it is ready.", open: false };
+        else out[a.appId] = { label: `${e.planCode ? e.planCode[0]!.toUpperCase() + e.planCode.slice(1) : ""} plan, active.`, url: inst?.baseUrl ?? undefined };
+      }
     }
     return out;
   });

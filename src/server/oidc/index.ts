@@ -7,6 +7,7 @@ import { apps, oidcGrantOrgs, oidcPayloads } from "../db/schema";
 import { loadSession, parseCookie, SESSION_COOKIE } from "../account/sessions";
 import { allowedApps, memberAccessHooks, myOrganizations } from "../account/orgs";
 import { audit } from "../audit";
+import { publish } from "../hub/publish";
 import { hasSecondFactor } from "../account/mfa";
 
 async function needsSecondFactor(userId: string, platformRole: string) {
@@ -114,6 +115,9 @@ export async function endAppSessions(userId: string, organizationId?: string, ap
     if (!organizationId || Object.keys(auths).length === 0) await db().delete(oidcPayloads).where(and(eq(oidcPayloads.model, "Session"), eq(oidcPayloads.id, row.id)));
     else await db().update(oidcPayloads).set({ payload: { ...p, authorizations: auths } as never }).where(and(eq(oidcPayloads.model, "Session"), eq(oidcPayloads.id, row.id)));
   }
+  // Multi-site apps (one back-channel URI cannot reach every site) hear it as an event on the organization's instance.
+  const orgs = organizationId ? [organizationId] : [...new Set(grants.map((gr) => gr.organizationId))];
+  for (const o of orgs) await publish("account.sessions.revoked", o, { userId, appIds: appIds && appIds !== "all" ? appIds : "all" });
   if (grantIds.length) {
     await db().delete(oidcPayloads).where(inArray(oidcPayloads.grantId, grantIds));
     await db().delete(oidcPayloads).where(and(eq(oidcPayloads.model, "Grant"), inArray(oidcPayloads.id, grantIds)));

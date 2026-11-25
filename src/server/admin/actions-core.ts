@@ -55,7 +55,7 @@ export async function setAddOnOnSale(staffId: string, addOnId: string, onSale: b
   await audit({ actorId: staffId, actorKind: "staff", action: onSale ? "add_on.on_sale" : "add_on.off_sale", entity: "add_on", entityId: addOnId });
 }
 
-export async function updateApp(staffId: string, appId: string, input: { baseUrl: string; redirectUris: string[]; postLogoutRedirectUris: string[]; backchannelLogoutUri: string | null; eventEndpoint: string | null; provisionUrl: string | null; healthUrl: string | null; acceptsEvents: string[] }) {
+export async function updateApp(staffId: string, appId: string, input: { baseUrl: string; redirectUris: string[]; postLogoutRedirectUris: string[]; backchannelLogoutUri: string | null; eventEndpoint: string | null; provisionUrl: string | null; healthUrl: string | null; acceptsEvents: string[]; instancePaths: Record<string, string> }) {
   for (const u of [input.baseUrl, ...input.redirectUris, ...input.postLogoutRedirectUris, input.backchannelLogoutUri, input.eventEndpoint, input.provisionUrl].filter(Boolean) as string[]) {
     if (!/^https:\/\//.test(u) && !/^http:\/\/localhost/.test(u)) throw new Error(`Use https: ${u}`);
   }

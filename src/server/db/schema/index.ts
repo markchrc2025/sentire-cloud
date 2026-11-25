@@ -5,3 +5,4 @@ export * from "./apps";
 export * from "./events";
 export * from "./billing";
 export * from "./entitlements";
+export * from "./hosting";
