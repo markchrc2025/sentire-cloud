@@ -5,12 +5,14 @@ import { log } from "@/lib/log";
 import { mounts } from "@/server/http/mounts";
 import { startWorker } from "@/worker/start";
 import { ensureRegistry } from "@/server/account/registry";
+import { seedCatalog } from "@/server/billing/catalog";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT ?? 3000);
 
 await runMigrations();
 await ensureRegistry();
+await seedCatalog();
 const app = next({ dev, dir: process.cwd() });
 await app.prepare();
 const handle = app.getRequestHandler();
