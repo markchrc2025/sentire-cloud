@@ -29,6 +29,20 @@
       "when": 1795573095153,
       "tag": "0003_phase1_events",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795574218345,
+      "tag": "0004_phase2_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795574219044,
+      "tag": "0005_billing_guards",
+      "breakpoints": true
     }
   ]
 }
