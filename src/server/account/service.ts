@@ -87,12 +87,12 @@ async function consumeToken(token: string, purpose: "VERIFY" | "RESET") {
 }
 
 /** UC-01 step 4: verify and sign in. */
-export async function verifyEmail(token: string, ip?: string | null) {
+export async function verifyEmail(token: string, ip?: string | null, device?: string | null) {
   const t = await consumeToken(token, "VERIFY");
   if (!t) return null;
   await db().update(users).set({ emailVerified: true, status: "ACTIVE" }).where(eq(users.id, t.userId));
   await audit({ actorId: t.userId, action: "user.email_verified", entity: "user", entityId: t.userId, ip });
-  return createSession(t.userId, { ip });
+  return createSession(t.userId, { ip, device });
 }
 
 export async function resendVerification(email: string, ip?: string | null) {

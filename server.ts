@@ -17,7 +17,7 @@ await ensureRegistry();
 await seedCatalog();
 wire();
 await bootstrapStaff();
-const app = next({ dev, dir: process.cwd() });
+const app = next({ dev, dir: process.cwd(), port, hostname: "localhost" });
 await app.prepare();
 const handle = app.getRequestHandler();
 const mounted = await mounts();
