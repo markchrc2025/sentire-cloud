@@ -5,6 +5,7 @@ import { decrypt } from "@/lib/crypto";
 import { log } from "@/lib/log";
 import { onPublish, type SentireEvent } from "./publish";
 import { signBody } from "./sign";
+import { endpointFor } from "../hosting/instances";
 
 /** Retry schedule (FR-29): 1 min, 5 min, 30 min, 2 h, 12 h, then FAILED. */
 export const RETRY_MINUTES = [1, 5, 30, 120, 720];
@@ -17,7 +18,7 @@ async function recipients(e: SentireEvent, tx = db()) {
     .from(entitlements)
     .innerJoin(apps, eq(apps.appId, entitlements.appId))
     .where(eq(entitlements.organizationId, e.organizationId));
-  return rows.map((r) => r.app).filter((a) => a.active && a.eventEndpoint && a.eventSecretEnc && (a.acceptsEvents.length === 0 || a.acceptsEvents.some((p) => (p.endsWith("*") ? e.type.startsWith(p.slice(0, -1)) : p === e.type))));
+  return rows.map((r) => r.app).filter((a) => a.active && (a.eventEndpoint || a.instancePaths.events) && a.eventSecretEnc && (a.acceptsEvents.length === 0 || a.acceptsEvents.some((p) => (p.endsWith("*") ? e.type.startsWith(p.slice(0, -1)) : p === e.type))));
 }
 
 onPublish(async (e, tx) => {
@@ -31,7 +32,8 @@ export async function deliverOne(deliveryId: string, fetchImpl: typeof fetch = f
   if (!d || d.status === "DELIVERED" || d.status === "FAILED") return d?.status;
   const [ev] = await db().select().from(events).where(eq(events.eventId, d.eventId));
   const [app] = await db().select().from(apps).where(eq(apps.appId, d.appId));
-  if (!ev || !app?.eventEndpoint || !app.eventSecretEnc) {
+  const endpoint = await endpointFor(d.organizationId, d.appId, "events");
+  if (!ev || !endpoint || !app?.eventSecretEnc) {
     await db().update(deliveries).set({ status: "NOT_DELIVERED", error: "app has no event endpoint" }).where(eq(deliveries.id, d.id));
     return "NOT_DELIVERED";
   }
@@ -40,7 +42,7 @@ export async function deliverOne(deliveryId: string, fetchImpl: typeof fetch = f
   let status = 0;
   let error: string | null = null;
   try {
-    const res = await fetchImpl(app.eventEndpoint, {
+    const res = await fetchImpl(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Sentire-Signature": signBody(decrypt(app.eventSecretEnc), body), "X-Sentire-Event": ev.type, "X-Sentire-Event-Id": ev.eventId },
       body,

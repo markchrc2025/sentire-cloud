@@ -5,6 +5,7 @@ import { apps, events } from "../db/schema";
 import { decrypt } from "@/lib/crypto";
 import { verifySignature } from "./sign";
 import { recordInvoiceNumber } from "../billing/payments";
+import { exportReady } from "../hosting/instances";
 
 /** Events apps send to Sentire Cloud (POST /api/v1/events). App-to-app routing arrives in Phase 5. */
 const handlers: Record<string, (data: unknown, appId: string) => Promise<void>> = {
@@ -13,6 +14,11 @@ const handlers: Record<string, (data: unknown, appId: string) => Promise<void>> 
     const d = z.object({ statementId: z.string(), invoiceNumber: z.string().min(1) }).parse(data);
     if (appId !== "ledger") throw new Error("only Ledger issues Sentire's invoices");
     await recordInvoiceNumber(null, d.statementId, d.invoiceNumber);
+  },
+  /** UC-12 step 2: the app finished the export. */
+  "app.export.ready": async (data) => {
+    const d = z.object({ jobId: z.string(), fileUrl: z.string().url(), sha256: z.string().optional() }).parse(data);
+    await exportReady(d.jobId, d.fileUrl, d.sha256 ?? null);
   },
 };
 

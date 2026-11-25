@@ -8,6 +8,10 @@ import { issueCreditNote, recordBankTransfer, recordInvoiceNumber, recordRefund,
 import { reviewCertificate } from "@/server/billing/withholding";
 import { addOverride, addPriceVersion, extendGrace, removeOverride, rotateSecret, setAddOnOnSale, setPlatformRole, updateApp, updateSeller } from "@/server/admin/actions-core";
 import { resend } from "@/server/hub/deliver";
+import { deleted, exportReady, markReady } from "@/server/hosting/instances";
+import { db } from "@/server/db/client";
+import { provisioningJobs } from "@/server/db/schema";
+import { and, eq } from "drizzle-orm";
 
 function back(path: string, kind: "ok" | "error", text: string): never {
   redirect(`${path}${path.includes("?") ? "&" : "?"}${kind}=${encodeURIComponent(text)}`);
@@ -59,6 +63,14 @@ export async function orgAdminAction(fd: FormData) {
       }),
     );
   if (op === "unoverride") return run(path, "Override removed.", () => removeOverride(s.user.id, String(fd.get("id"))));
+  if (op === "ready") return run(path, "Instance ready; the Owner was emailed.", () => markReady(String(fd.get("instanceId")), String(fd.get("baseUrl")), s.user.id));
+  if (op === "export")
+    return run(path, "Export recorded; the Owner was emailed.", async () => {
+      const [j] = await db().select().from(provisioningJobs).where(and(eq(provisioningJobs.instanceId, String(fd.get("instanceId"))), eq(provisioningJobs.kind, "EXPORT")));
+      if (!j) throw new Error("No export job.");
+      await exportReady(j.id, String(fd.get("fileUrl")), null);
+    });
+  if (op === "deleted") return run(path, "Deletion recorded.", () => deleted(String(fd.get("instanceId")), String(fd.get("certificate")), s.user.id));
   if (op === "resend") return run(path, "Queued again.", () => resend(String(fd.get("id"))));
   if (op === "staff") return run(path, "Role saved.", () => setPlatformRole(s.user.id, String(fd.get("userId")), String(fd.get("role")) as "NONE"));
 }
@@ -101,7 +113,11 @@ export async function appAction(fd: FormData) {
   const opt = (k: string) => String(fd.get(k) ?? "").trim() || null;
   if (op === "save")
     return run("/admin/apps", `${appId} saved.`, () =>
-      updateApp(s.user.id, appId, { baseUrl: String(fd.get("baseUrl")), redirectUris: list("redirectUris"), postLogoutRedirectUris: list("postLogoutRedirectUris"), backchannelLogoutUri: opt("backchannelLogoutUri"), eventEndpoint: opt("eventEndpoint"), provisionUrl: opt("provisionUrl"), healthUrl: opt("healthUrl"), acceptsEvents: list("acceptsEvents") }),
+      updateApp(s.user.id, appId, {
+        baseUrl: String(fd.get("baseUrl")), redirectUris: list("redirectUris"), postLogoutRedirectUris: list("postLogoutRedirectUris"), backchannelLogoutUri: opt("backchannelLogoutUri"),
+        eventEndpoint: opt("eventEndpoint"), provisionUrl: opt("provisionUrl"), healthUrl: opt("healthUrl"), acceptsEvents: list("acceptsEvents"),
+        instancePaths: JSON.parse(String(fd.get("instancePaths") || "{}")),
+      }),
     );
   if (op === "oidc" || op === "event") {
     let secret = "";

@@ -18,6 +18,8 @@ export const apps = pgTable("apps", {
   eventSecretEnc: text(),
   previousEventSecretEnc: text(),
   provisionUrl: text(),
+  /** Multi-site apps (Ledger): paths on each organization's instance. */
+  instancePaths: jsonb().$type<{ events?: string; callback?: string; export?: string; delete?: string; suspend?: string; resume?: string; health?: string }>().notNull().default({}),
   healthUrl: text(),
   sendsEvents: jsonb().$type<string[]>().notNull().default([]),
   acceptsEvents: jsonb().$type<string[]>().notNull().default([]),

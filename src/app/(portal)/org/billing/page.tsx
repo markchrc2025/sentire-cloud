@@ -8,6 +8,7 @@ import { formatPHP } from "@/lib/money";
 import { balance } from "@/server/billing/statements";
 import { addOnsAction, cancelAction, changePlanAction, uploadCertificateAction } from "./billing-actions";
 import { billingPageExtras } from "@/server/billing/page-extras";
+import { orgInstances } from "@/server/hosting/instances";
 
 export const metadata = { title: "Billing" };
 const STATUS: Record<string, string> = { PENDING: "Waiting for payment", ACTIVE: "Active", PAST_DUE: "Payment overdue", SUSPENDED: "Read-only (unpaid)", CANCELLED: "Cancelled", EXPIRED: "Not started" };
@@ -22,6 +23,7 @@ export default async function Billing({ searchParams }: { searchParams: SP }) {
   }
   const [subs, statements, whs] = await Promise.all([orgSubscriptions(ctx), orgStatements(ctx), orgWithholdings(ctx)]);
   const extras = await billingPageExtras(ctx.organizationId);
+  const insts = current.role === "OWNER" ? (await orgInstances(ctx.organizationId)).filter((i) => i.status === "EXPORTED" && i.exportFileUrl) : [];
   return (
     <>
       <h1 className="text-2xl font-semibold">Billing</h1>
@@ -75,6 +77,13 @@ export default async function Billing({ searchParams }: { searchParams: SP }) {
         </div>
       </section>
 
+      {insts.map((i) => (
+        <section key={i.id} className="card mt-6 ring-gold">
+          <h2 className="font-semibold">Your {i.appId} data export</h2>
+          <p className="text-sm">Download it before {i.exportExpiresAt?.toISOString().slice(0, 10)}. After that date the data is deleted.</p>
+          <a className="btn mt-3" href={i.exportFileUrl!}>Download export</a>{i.exportSha256 ? <span className="muted ml-3 text-xs">SHA-256 {i.exportSha256}</span> : null}
+        </section>
+      ))}
       <section className="card mt-6 overflow-x-auto">
         <h2 className="font-semibold">Billing statements</h2>
         <table className="data mt-3">

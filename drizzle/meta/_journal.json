@@ -50,6 +50,13 @@
       "when": 1795575076515,
       "tag": "0006_phase3_entitlements",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795575464111,
+      "tag": "0007_phase4_instances",
+      "breakpoints": true
     }
   ]
 }

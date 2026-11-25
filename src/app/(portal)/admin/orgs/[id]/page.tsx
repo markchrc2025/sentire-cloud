@@ -7,6 +7,8 @@ import { orgAdminAction } from "../../admin-actions";
 import { db } from "@/server/db/client";
 import { entitlementOverrides } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { orgInstances } from "@/server/hosting/instances";
+import { provisioningJobs } from "@/server/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,8 @@ export default async function OrgAdmin({ params, searchParams }: { params: Promi
   const d = await orgDetail(id);
   if (!d) notFound();
   const overrides = await db().select().from(entitlementOverrides).where(eq(entitlementOverrides.organizationId, id));
+  const insts = await orgInstances(id);
+  const jobs = await db().select().from(provisioningJobs).where(eq(provisioningJobs.organizationId, id));
   return (
     <div className="space-y-6">
       <Messages sp={sp} />
@@ -34,6 +38,26 @@ export default async function OrgAdmin({ params, searchParams }: { params: Promi
             {["PAST_DUE", "SUSPENDED"].includes(s.status) ? (
               <form action={orgAdminAction} className="flex gap-1"><input type="hidden" name="organizationId" value={id} /><input type="hidden" name="op" value="grace" /><input type="hidden" name="subscriptionId" value={s.id} />
                 <input type="date" name="until" className="input py-0" required aria-label="Grace until" /><input name="reason" className="input py-0" placeholder="Reason" required /><button className="btn-secondary py-0">Extend grace</button></form>
+            ) : null}
+          </div>
+        ))}
+      </section>
+      <section className="card"><h2 className="font-semibold">Instances</h2>
+        {insts.map((i) => (
+          <div key={i.id} className="mt-2 text-sm">
+            <strong>{i.appId}</strong> {i.status} {i.baseUrl ?? ""} {i.exportFileUrl ? `· export ${i.exportFileUrl}` : ""}
+            <ul className="muted text-xs">{jobs.filter((j) => j.instanceId === i.id).map((j) => <li key={j.id}>{j.kind} {j.status} (attempt {j.attempt}) <pre className="whitespace-pre-wrap">{j.log}</pre></li>)}</ul>
+            {i.status === "PROVISIONING" || i.status === "FAILED" ? (
+              <form action={orgAdminAction} className="mt-1 flex gap-1"><input type="hidden" name="organizationId" value={id} /><input type="hidden" name="op" value="ready" /><input type="hidden" name="instanceId" value={i.id} />
+                <input className="input py-0" name="baseUrl" placeholder="https://client.ledger.sentire.solutions" required /><button className="btn-secondary py-0">Mark ready</button></form>
+            ) : null}
+            {i.status === "EXPORTING" ? (
+              <form action={orgAdminAction} className="mt-1 flex gap-1"><input type="hidden" name="organizationId" value={id} /><input type="hidden" name="op" value="export" /><input type="hidden" name="instanceId" value={i.id} />
+                <input className="input py-0" name="fileUrl" placeholder="Signed link to the export file" required /><button className="btn-secondary py-0">Record export</button></form>
+            ) : null}
+            {i.status === "EXPORTED" ? (
+              <form action={orgAdminAction} className="mt-1 flex gap-1"><input type="hidden" name="organizationId" value={id} /><input type="hidden" name="op" value="deleted" /><input type="hidden" name="instanceId" value={i.id} />
+                <textarea className="input py-0" name="certificate" placeholder="Deletion certificate text" required /><button className="btn-danger py-0">Record deletion</button></form>
             ) : null}
           </div>
         ))}

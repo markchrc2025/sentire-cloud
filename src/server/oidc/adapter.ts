@@ -1,8 +1,8 @@
-import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Adapter, AdapterPayload } from "oidc-provider";
 import { decrypt } from "@/lib/crypto";
 import { db } from "../db/client";
-import { apps, oidcPayloads } from "../db/schema";
+import { apps, instances, oidcPayloads } from "../db/schema";
 
 /** Postgres storage for oidc-provider. Clients come from the app registry. */
 export class PgAdapter implements Adapter {
@@ -65,12 +65,19 @@ export class PgAdapter implements Adapter {
 
 async function findClient(clientId: string): Promise<AdapterPayload | undefined> {
   const [a] = await db().select().from(apps).where(eq(apps.oidcClientId, clientId)).limit(1);
-  if (!a || !a.active || !a.oidcClientSecretEnc || a.redirectUris.length === 0) return undefined;
+  if (!a || !a.active || !a.oidcClientSecretEnc) return undefined;
+  // Multi-site apps: every instance's callback is an allowed redirect.
+  const callback = a.instancePaths.callback;
+  const extra = callback
+    ? (await db().select({ baseUrl: instances.baseUrl }).from(instances).where(and(eq(instances.appId, a.appId), isNotNull(instances.baseUrl)))).map((i) => i.baseUrl!.replace(/\/$/, "") + callback)
+    : [];
+  const redirectUris = [...new Set([...a.redirectUris, ...extra])];
+  if (!redirectUris.length) return undefined;
   return {
     client_id: a.oidcClientId,
     client_secret: decrypt(a.oidcClientSecretEnc),
     client_name: a.name,
-    redirect_uris: a.redirectUris,
+    redirect_uris: redirectUris,
     post_logout_redirect_uris: a.postLogoutRedirectUris,
     grant_types: ["authorization_code", "refresh_token", "client_credentials"],
     response_types: ["code"],
