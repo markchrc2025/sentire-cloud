@@ -12,19 +12,19 @@ export const RETRY_MINUTES = [1, 5, 30, 120, 720];
 
 /** Apps that hear an organization's account and billing events: those with an entitlement for it and an event endpoint. */
 async function recipients(e: SentireEvent, tx = db()) {
-  if (!e.organizationId) return [];
+  if (!e.company) return [];
   const rows = await tx
     .select({ app: apps })
     .from(entitlements)
     .innerJoin(apps, eq(apps.appId, entitlements.appId))
-    .where(eq(entitlements.organizationId, e.organizationId));
+    .where(eq(entitlements.organizationId, e.company));
   return rows.map((r) => r.app).filter((a) => a.active && (a.eventEndpoint || a.instancePaths.events) && a.eventSecretEnc && (a.acceptsEvents.length === 0 || a.acceptsEvents.some((p) => (p.endsWith("*") ? e.type.startsWith(p.slice(0, -1)) : p === e.type))));
 }
 
 onPublish(async (e, tx) => {
   if (!e.type.startsWith("account.") && !e.type.startsWith("billing.") && !e.type.startsWith("paywall.")) return;
   const to = await recipients(e, tx as never);
-  if (to.length) await tx.insert(deliveries).values(to.map((a) => ({ eventId: e.eventId, appId: a.appId, organizationId: e.organizationId, nextAttemptAt: new Date() }))).onConflictDoNothing();
+  if (to.length) await tx.insert(deliveries).values(to.map((a) => ({ eventId: e.id, appId: a.appId, organizationId: e.company, nextAttemptAt: new Date() }))).onConflictDoNothing();
 });
 
 export async function deliverOne(deliveryId: string, fetchImpl: typeof fetch = fetch) {

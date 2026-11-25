@@ -136,7 +136,7 @@ describe("event delivery (FR-29 core)", () => {
     }) as unknown as typeof fetch;
     expect(await sweepDeliveries(ok)).toBe(ds.length);
     expect(verifySignature([eventSecret], seen[0]!.sig, seen[0]!.body)).toBe(true);
-    expect(JSON.parse(seen[0]!.body).specVersion).toBe("sentire.event.v1");
+    expect(JSON.parse(seen[0]!.body).specversion).toBe("sentire.event.v1");
     // A failing endpoint: five retries, then FAILED
     const [d] = await db().insert(deliveries).values({ eventId: ds[0]!.eventId, appId: "payroll", organizationId: orgId }).returning();
     await db().update(apps).set({ eventEndpoint: "https://payroll.example/e", eventSecretEnc: encrypt("x".repeat(32)) }).where(eq(apps.appId, "payroll"));
@@ -151,7 +151,7 @@ describe("event delivery (FR-29 core)", () => {
     const { eventSecret } = await ledgerSecretSetup();
     const { statement } = await subscribe(ctx, { planId: await plan("solo"), cycle: "ANNUAL", method: "ONLINE" });
     await pay(statement.id, ctx);
-    const body = JSON.stringify({ specVersion: "sentire.event.v1", eventId: "e-1", type: "ledger.invoice.issued", source: "ledger", organizationId: null, data: { statementId: statement.id, invoiceNumber: "SI-000123" } });
+    const body = JSON.stringify({ specversion: "sentire.event.v1", id: "e-1", type: "ledger.invoice.issued", source: "ledger", company: null, time: "2026-11-25T00:00:00Z", data: { statementId: statement.id, invoiceNumber: "SI-000123" } });
     await expect(receiveEvent("t=1,v1=bad", body)).rejects.toThrow(/signature/);
     expect((await receiveEvent(signBody(eventSecret, body), body)).duplicate).toBe(false);
     expect((await receiveEvent(signBody(eventSecret, body), body)).duplicate).toBe(true);
