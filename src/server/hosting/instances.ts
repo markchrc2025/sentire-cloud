@@ -155,6 +155,11 @@ async function runJob(jobId: string) {
         return;
       }
       const r = await signedPost(inst!.appId, url, { jobId: j.id, orgId: inst!.organizationId, confirm: "DELETE" });
+      if (r.ok && r.data.manual) {
+        await db().update(provisioningJobs).set({ status: "WAITING", attempt, log: note(`the app deletes by hand: ${String(r.data.note ?? "")}`) }).where(eq(provisioningJobs.id, j.id));
+        await alertStaff(`Delete the ${inst!.appId} site of organization ${inst!.organizationId} and record the deletion certificate in the staff console.`);
+        return;
+      }
       if (!r.ok || typeof r.data.certificate !== "string") throw new Error(`HTTP ${r.status} ${r.text}`);
       await deleted(inst!.id, r.data.certificate as string, null);
       await db().update(provisioningJobs).set({ status: "DONE", attempt, log: note("deleted; certificate stored") }).where(eq(provisioningJobs.id, j.id));
