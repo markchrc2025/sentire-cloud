@@ -235,6 +235,7 @@ export const checkoutSessions = pgTable(
     withholdingAtc: text(),
     withholdingBasisPoints: integer(),
     withholdingCentavos: bigint({ mode: "number" }),
+    paywallFeature: text(),
     createdBy: text(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

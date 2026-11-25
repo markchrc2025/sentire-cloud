@@ -14,6 +14,9 @@ export const apps = pgTable("apps", {
   postLogoutRedirectUris: jsonb().$type<string[]>().notNull().default([]),
   backchannelLogoutUri: text(),
   eventEndpoint: text(),
+  /** Signing secret for events between Sentire Cloud and this app (sentire.event.v1), encrypted. Two during rotation. */
+  eventSecretEnc: text(),
+  previousEventSecretEnc: text(),
   provisionUrl: text(),
   healthUrl: text(),
   sendsEvents: jsonb().$type<string[]>().notNull().default([]),

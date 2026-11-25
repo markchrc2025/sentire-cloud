@@ -165,7 +165,8 @@ describe("UC-02 single sign-on (OpenID Connect)", () => {
     const { token } = await createSession(owner.id);
 
     // Owners must have a second factor before opening apps (FR-02).
-    expect((await authorize(new Browser(token), clientId)).last).toBe("/account/security?required=1");
+    const f0 = await authorize(new Browser(token), clientId);
+    expect(f0.last).toBe("/account/security?required=1");
     const tf = await startTotp(owner.id, owner.email);
     await confirmTotp(owner.id, tf.factorId, await generate({ secret: tf.secret }));
 
