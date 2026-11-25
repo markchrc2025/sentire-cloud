@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db, type DBorTx } from "../db/client";
-import { billingStatements, checkoutSessions, creditNotes, organizations, payments, sellerProfiles, webhookEvents, withholdings } from "../db/schema";
+import { billingStatements, checkoutSessions, creditNotes, organizations, payments, paywallEvents, sellerProfiles, webhookEvents, withholdings } from "../db/schema";
 import { inOrg, type OrgContext } from "../db/dal";
 import { requireRole } from "../account/orgs";
 import { env } from "@/lib/env";
@@ -104,7 +104,7 @@ async function publishPaid(statementId: string, tx: DBorTx) {
 }
 
 /** UC-04 step 5: hosted checkout for the balance, optionally net of withholding (FR-19). */
-export async function startCheckout(ctx: OrgContext, statementId: string, opts: { atc?: string | null; returnUrl?: string | null } = {}) {
+export async function startCheckout(ctx: OrgContext, statementId: string, opts: { atc?: string | null; returnUrl?: string | null; paywallFeature?: string | null } = {}) {
   await requireRole(ctx, ["OWNER", "BILLING"]);
   const [st] = await db().select().from(billingStatements).where(inOrg(ctx, billingStatements.organizationId, eq(billingStatements.id, statementId)));
   if (!st || !["OPEN", "PARTIALLY_PAID"].includes(st.status)) throw new BillingError("This statement has nothing to pay.");
@@ -118,7 +118,7 @@ export async function startCheckout(ctx: OrgContext, statementId: string, opts: 
   const p = provider();
   const [cs] = await db()
     .insert(checkoutSessions)
-    .values({ organizationId: st.organizationId, statementId: st.id, provider: p.name, amountCentavos: amount, returnUrl: opts.returnUrl ?? null, withholdingAtc: opts.atc ?? null, withholdingBasisPoints: atc?.basisPoints ?? null, withholdingCentavos: withheld || null, createdBy: ctx.actorId })
+    .values({ organizationId: st.organizationId, statementId: st.id, provider: p.name, amountCentavos: amount, returnUrl: opts.returnUrl ?? null, withholdingAtc: opts.atc ?? null, withholdingBasisPoints: atc?.basisPoints ?? null, withholdingCentavos: withheld || null, paywallFeature: opts.paywallFeature ?? null, createdBy: ctx.actorId })
     .returning();
   const base = env().APP_URL.replace(/\/$/, "");
   const created = await p.createCheckout({
@@ -163,6 +163,7 @@ export async function handleWebhook(providerName: string, headers: Headers, rawB
         );
       });
       await afterCommit();
+      if (cs.paywallFeature) await db().insert(paywallEvents).values({ organizationId: cs.organizationId, featureKey: cs.paywallFeature, userId: cs.createdBy, action: "PURCHASED" });
     } else if (evt.type === "payment.failed") {
       await db().update(checkoutSessions).set({ status: "FAILED" }).where(and(eq(checkoutSessions.provider, p.name), eq(checkoutSessions.providerRef, evt.providerRef)));
     }

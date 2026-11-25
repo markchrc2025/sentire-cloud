@@ -21,6 +21,7 @@ export default async function PortalLayout({ children }: { children: React.React
                 <Link href="/org">Apps</Link>
                 <Link href="/org/members">Members</Link>
                 <Link href="/org/billing">Billing</Link>
+                <Link href="/org/requests">Requests</Link>
                 <Link href="/org/settings">Organization</Link>
                 {isStaff ? <Link href="/admin">Admin</Link> : null}
               </nav>

@@ -63,7 +63,7 @@ export async function buildProvider() {
       introspection: "/oidc/token/introspection",
     },
     interactions: { url: (_ctx, interaction) => `/oidc/interaction/${interaction.uid}` },
-    scopes: ["openid", "offline_access", "profile", "email", "org", "entitlements"],
+    scopes: ["openid", "offline_access", "profile", "email", "org", "entitlements", "entitlements:read", "usage:write", "events:write"],
     claims: {
       openid: ["sub"],
       email: ["email", "email_verified"],

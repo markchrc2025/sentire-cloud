@@ -43,6 +43,13 @@
       "when": 1795574219044,
       "tag": "0005_billing_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795575076515,
+      "tag": "0006_phase3_entitlements",
+      "breakpoints": true
     }
   ]
 }

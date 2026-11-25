@@ -75,6 +75,7 @@ async function findClient(clientId: string): Promise<AdapterPayload | undefined>
     grant_types: ["authorization_code", "refresh_token", "client_credentials"],
     response_types: ["code"],
     token_endpoint_auth_method: "client_secret_basic",
+    scope: "openid offline_access profile email org entitlements entitlements:read usage:write events:write",
     ...(a.backchannelLogoutUri ? { backchannel_logout_uri: a.backchannelLogoutUri, backchannel_logout_session_required: true } : {}),
   } as AdapterPayload;
 }

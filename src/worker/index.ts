@@ -1,6 +1,9 @@
 import { runMigrations } from "@/server/db/migrate";
 import { log } from "@/lib/log";
 import { startWorker } from "./start";
+import { wire } from "@/server/wire";
+
+wire();
 
 await runMigrations();
 const b = await startWorker();
