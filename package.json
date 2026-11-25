@@ -1,9 +1,52 @@
 {
   "name": "sentire-cloud",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Sentire Cloud: the console and runbooks for where Sentire products run.",
-  "scripts": { "start": "node src/server.js", "test": "node --test test/status.test.mjs" },
-  "engines": { "node": ">=22" }
+  "description": "Sentire Cloud: Sentire Account, billing, entitlements, paywall, connections and hosting for every Sentire app.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false server.ts",
+    "build": "next build",
+    "start": "NODE_ENV=production tsx server.ts",
+    "worker": "tsx src/worker/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/server/db/migrate-cli.ts",
+    "db:seed": "tsx src/server/db/seed.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.4",
+    "jose": "^6.2.18",
+    "next": "16.4.6",
+    "pg-boss": "^12.39.0",
+    "pino": "^10.4.0",
+    "postgres": "^4.1.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "ulid": "^3.0.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^26.6.7",
+    "@types/react": "^19.3.1",
+    "@types/react-dom": "^19.3.0",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.74.0",
+    "vitest": "^5.1.1"
+  }
 }
