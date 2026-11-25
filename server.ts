@@ -6,7 +6,7 @@ import { mounts } from "@/server/http/mounts";
 import { startWorker } from "@/worker/start";
 import { ensureRegistry } from "@/server/account/registry";
 import { seedCatalog } from "@/server/billing/catalog";
-import { wire } from "@/server/wire";
+import { refreshEverything, wire } from "@/server/wire";
 import { bootstrapStaff } from "@/server/admin/bootstrap";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -17,6 +17,8 @@ await ensureRegistry();
 await seedCatalog();
 wire();
 await bootstrapStaff();
+// Entitlements are derived: recompute on boot so subscriptions paid before an upgrade of Sentire Cloud get theirs (idempotent).
+await refreshEverything();
 const app = next({ dev, dir: process.cwd(), port, hostname: "localhost" });
 await app.prepare();
 const handle = app.getRequestHandler();
