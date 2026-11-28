@@ -1,12 +1,13 @@
+import { shared } from "../shared";
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { subscriptionItems, subscriptions } from "../db/schema";
 
 /** Add-ons per subscription, and usage text filled by entitlements (Phase 3). */
 export type UsageText = (organizationId: string) => Promise<Record<string, string>>;
-let usageText: UsageText = async () => ({});
+const usageBox = shared("usageText", () => ({ fn: (async () => ({})) as UsageText }));
 export function setUsageText(fn: UsageText) {
-  usageText = fn;
+  usageBox.fn = fn;
 }
 
 export async function billingPageExtras(organizationId: string) {
@@ -17,5 +18,5 @@ export async function billingPageExtras(organizationId: string) {
     .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptionItems.kind, "ADD_ON"), eq(subscriptionItems.active, true)));
   const addOns: Record<string, string[]> = {};
   for (const i of items) (addOns[i.subscriptionId] ??= []).push(i.addOnId!);
-  return { addOns, usage: await usageText(organizationId) };
+  return { addOns, usage: await usageBox.fn(organizationId) };
 }

@@ -1,3 +1,4 @@
+import { shared } from "../shared";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type Provider from "oidc-provider";
 import { and, eq, inArray } from "drizzle-orm";
@@ -35,9 +36,9 @@ export async function getProvider(): Promise<Provider> {
 
 /** Entitlement gate for sign-in (Phase 3). Returns "ACTIVE" | "READ_ONLY" | "OFF". */
 export type EntGate = (organizationId: string, appId: string) => Promise<"ACTIVE" | "READ_ONLY" | "OFF">;
-let entGate: EntGate = async () => "ACTIVE";
+const gateBox = shared("entGate", () => ({ fn: (async () => "ACTIVE") as EntGate }));
 export function setEntitlementGate(fn: EntGate) {
-  entGate = fn;
+  gateBox.fn = fn;
 }
 
 function redirect(res: ServerResponse, to: string) {
@@ -70,7 +71,7 @@ async function interaction(req: IncomingMessage, res: ServerResponse, provider: 
     if (eligible.length === 1) orgId = eligible[0]!;
     else return redirect(res, `/choose-organization?uid=${uid}&app=${app.appId}`);
   }
-  const state = await entGate(orgId, app.appId);
+  const state = await gateBox.fn(orgId, app.appId);
   if (state === "OFF") return redirect(res, `/no-access?app=${app.appId}&org=${orgId}&reason=subscription`);
 
   const grant = new provider.Grant({ accountId: s.user.id, clientId });

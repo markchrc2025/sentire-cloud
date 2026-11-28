@@ -25,7 +25,7 @@ onPublish(async (e, tx) => {
   if (!e.type.startsWith("account.") && !e.type.startsWith("billing.") && !e.type.startsWith("paywall.")) return;
   const to = await recipients(e, tx as never);
   if (to.length) await tx.insert(deliveries).values(to.map((a) => ({ eventId: e.id, appId: a.appId, organizationId: e.company, nextAttemptAt: new Date() }))).onConflictDoNothing();
-});
+}, "deliver");
 
 export async function deliverOne(deliveryId: string, fetchImpl: typeof fetch = fetch) {
   const [d] = await db().select().from(deliveries).where(eq(deliveries.id, deliveryId));

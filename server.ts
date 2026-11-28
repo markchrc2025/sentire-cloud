@@ -19,6 +19,9 @@ wire();
 await bootstrapStaff();
 // Entitlements are derived: recompute on boot so subscriptions paid before an upgrade of Sentire Cloud get theirs (idempotent).
 await refreshEverything();
+// Server action redirects fetch the target page from this same process. Behind the proxy the request says https,
+// but the process itself listens on plain http, so give Next the internal origin.
+process.env.__NEXT_PRIVATE_ORIGIN ??= `http://127.0.0.1:${port}`;
 const app = next({ dev, dir: process.cwd(), port, hostname: "localhost" });
 await app.prepare();
 const handle = app.getRequestHandler();

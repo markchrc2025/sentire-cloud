@@ -1,3 +1,4 @@
+import { shared } from "./shared";
 /**
  * Connects the modules through their hooks. Imported once by the server, the worker and the tests.
  * Phase 1 code (sign-in, members) and Phase 2 code (billing) stay unaware of entitlements.
@@ -17,10 +18,10 @@ import { listApps } from "./account/registry";
 import "./hub/deliver";
 import { instanceFor, onActivated, onCancelled } from "./hosting/instances";
 
-let wired = false;
+const state = shared("wired", () => ({ done: false }));
 export function wire() {
-  if (wired) return;
-  wired = true;
+  if (state.done) return;
+  state.done = true;
 
   billingHooks.onActivated.push(onActivated);
   billingHooks.onCancelled.push(onCancelled);
@@ -66,7 +67,11 @@ export function wire() {
     const prods = await db().select().from(products);
     const apps = await listApps();
     for (const a of apps) {
-      if (!prods.some((p) => p.appId === a.appId)) continue;
+      // An app with nothing on sale yet is shown, but cannot be opened from here.
+      if (!prods.some((p) => p.appId === a.appId)) {
+        out[a.appId] = { label: "Not yet available on Sentire Cloud.", open: false };
+        continue;
+      }
       const e = await getEntitlement(organizationId, a.appId);
       if (!e || e.state === "OFF") out[a.appId] = { label: "Not subscribed.", open: false, cta: { label: "See plans", href: `/org/billing/subscribe?product=${prods.find((p) => p.appId === a.appId)!.code}` } };
       else if (e.state === "READ_ONLY") out[a.appId] = { label: "Read-only until the overdue statement is paid.", open: true };
@@ -83,6 +88,14 @@ export function wire() {
 }
 
 export async function refreshEverything() {
-  const subs = await db().select({ org: subscriptions.organizationId, app: products.appId }).from(subscriptions).innerJoin(products, eq(products.id, subscriptions.productId)).where(inArray(subscriptions.status, ["ACTIVE", "PAST_DUE", "SUSPENDED", "CANCELLED"]));
-  for (const s of subs) await refreshEntitlement(s.org, s.app);
+  const subs = await db()
+    .select({ id: subscriptions.id, status: subscriptions.status, org: subscriptions.organizationId, app: products.appId })
+    .from(subscriptions)
+    .innerJoin(products, eq(products.id, subscriptions.productId))
+    .where(inArray(subscriptions.status, ["ACTIVE", "PAST_DUE", "SUSPENDED", "CANCELLED"]));
+  for (const s of subs) {
+    await refreshEntitlement(s.org, s.app);
+    // A paid subscription always has an instance (idempotent).
+    if (s.status === "ACTIVE" && !(await instanceFor(s.org, s.app))) await onActivated(s.org, s.id);
+  }
 }
