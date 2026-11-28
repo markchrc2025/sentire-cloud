@@ -67,7 +67,11 @@ export function wire() {
     const prods = await db().select().from(products);
     const apps = await listApps();
     for (const a of apps) {
-      if (!prods.some((p) => p.appId === a.appId)) continue;
+      // An app with nothing on sale yet is shown, but cannot be opened from here.
+      if (!prods.some((p) => p.appId === a.appId)) {
+        out[a.appId] = { label: "Not yet available on Sentire Cloud.", open: false };
+        continue;
+      }
       const e = await getEntitlement(organizationId, a.appId);
       if (!e || e.state === "OFF") out[a.appId] = { label: "Not subscribed.", open: false, cta: { label: "See plans", href: `/org/billing/subscribe?product=${prods.find((p) => p.appId === a.appId)!.code}` } };
       else if (e.state === "READ_ONLY") out[a.appId] = { label: "Read-only until the overdue statement is paid.", open: true };
